@@ -14,9 +14,11 @@ import matplotlib.pyplot as plt
 import sklearn.datasets
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+import os
 import sys
 sys.path.insert(0, '../')
 from src.svm import KernelSVM
+from sklearn.svm import SVC 
 
 def sim_demo(plot_cache_path, check_sklearn=False, verbose=True, plot_contour=False):
     """
@@ -51,9 +53,9 @@ def sim_demo(plot_cache_path, check_sklearn=False, verbose=True, plot_contour=Fa
         for i in range(n_test):
             y_vals[i] = np.dot(kernel(X_train, X_test[i, :].reshape(1, -1), **train_cache).reshape(-1), beta)
         y_pred = np.sign(y_vals)
-        return np.mean(y_pred != y_test), y_vals  # return error and values from before applying cutoff
+        return np.mean(y_pred != y_test), y_vals, y_pred  # return error and values from before applying cutoff
     
-    def evaluate_plot(beta_vals, kernel, plot_contour, **train_cache):
+    def evaluate_plot(beta, kernel, contour_ax=None, **train_cache):
         """
         Report the misclassification error and predicted scores or test values, given the final beta weight and
         training configurations.
@@ -69,31 +71,28 @@ def sim_demo(plot_cache_path, check_sklearn=False, verbose=True, plot_contour=Fa
         Returns:
             test_values: Predicted score vector of shape (len(X_test),).
             y_vals: Predicted score vector of shape (len(X_test),).
-            ax: Contour Plot if not None.
         """
-        error, test_values = evaluate(beta_vals[-1, :], X_train, X_test, y_test, kernel, **train_cache)
+        error, test_values, test_preds = evaluate(beta, X_train, X_test, y_test, kernel, **train_cache)
         print('Misclassification error when lambda =', train_cache['lambda'], ':', error)
-        ax = None
-        if plot_contour:
+        if contour_ax is not None:
             Zs = np.c_[xx.ravel(), yy.ravel()]
-            Z = evaluate(beta_vals[-1, :], X_train, Zs, [0]*len(Zs), kernel, **train_cache)[1]
+            Z = evaluate(beta, X_train, Zs, [0]*len(Zs), kernel, **train_cache)[1]
             # Put the result into a color plot
             Z = Z.reshape(xx.shape)
-            ax = plt.subplot()
-            ax.contourf(xx, yy, Z, cmap=cm, alpha=.8)
+            contour_ax.contourf(xx, yy, Z, cmap=cm, alpha=.8)
 
             # Plot also the training points
-            ax.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright,
+            contour_ax.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright,
                        edgecolors='k')
             # and testing points
-            ax.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap=cm_bright,
+            contour_ax.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap=cm_bright,
                        edgecolors='k', alpha=0.2)
 
-            ax.set_xlim(xx.min(), xx.max())
-            ax.set_ylim(yy.min(), yy.max())
-            ax.set_xticks(())
-            ax.set_yticks(())
-        return error, test_values, ax
+            contour_ax.set_xlim(xx.min(), xx.max())
+            contour_ax.set_ylim(yy.min(), yy.max())
+            contour_ax.set_xticks(())
+            contour_ax.set_yticks(())
+        return error, test_values, test_preds
         
     X, y = sklearn.datasets.make_circles(noise=0.2, factor=0.5, random_state=1)
     X = StandardScaler().fit_transform(X)
@@ -103,34 +102,54 @@ def sim_demo(plot_cache_path, check_sklearn=False, verbose=True, plot_contour=Fa
     if verbose:
         print('Number of training examples:', X_train.shape[0])
         print('Number of test examples:', X_test.shape[0])
-
-    x_min, x_max = X[:, 0].min() - .5, X[:, 0].max() + .5
-    y_min, y_max = X[:, 1].min() - .5, X[:, 1].max() + .5
-    h = .02  # step size in the mesh
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                         np.arange(y_min, y_max, h))
-    cm = plt.cm.RdBu
-    cm_bright = ListedColormap(['#FF0000', '#0000FF'])
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 10))
     if plot_contour:
-        # Plot the training points
-        ax = plt.subplot()
-        ax.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright,
+        x_min, x_max = X[:, 0].min() - .5, X[:, 0].max() + .5
+        y_min, y_max = X[:, 1].min() - .5, X[:, 1].max() + .5
+        h = .02  # step size in the mesh
+        xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                             np.arange(y_min, y_max, h))
+        cm = plt.cm.RdBu
+        cm_bright = ListedColormap(['#FF0000', '#0000FF'])
+        
+        ax1.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright,
                    edgecolors='k')
         # and testing points
-        ax.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap=cm_bright, alpha=0.1,
+        ax1.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap=cm_bright, alpha=0.1,
                    edgecolors='k')
-        ax.set_xlim(xx.min(), xx.max())
-        ax.set_ylim(yy.min(), yy.max())
-        ax.set_xticks(())
-        ax.set_yticks(())
+        ax1.set_xlim(xx.min(), xx.max())
+        ax1.set_ylim(yy.min(), yy.max())
+        ax1.set_xticks(())
+        ax1.set_yticks(())
 
-    mysvm = KernelSVM(**{'plot': False, 'kernel_choice': 'rbf', 'sigma': 1, 'max_iter': 10, 'lambda': 0.8, 'margin': 1})
-    mysvm.fit(X_train, y_train)
-    beta_vals = mysvm.beta_vals
-    train_cache = mysvm.cache
-    errors, test_vals, contour_ax = evaluate_plot(beta_vals, mysvm.gram, plot_contour, **train_cache)
-    plt.show()
-    
+    rbf_params = {'plot_ax': ax2, 'kernel_choice': 'rbf', 'sigma': 1, 'order': 7, 'max_iter': 20, 'lambda': 0.8, 'margin': 1}
+    poly_params = {'plot_ax': ax2, 'kernel_choice': 'poly', 'sigma': 1, 'order': 7, 'max_iter': 20, 'lambda': 0.01, 'margin': 1}
+    linear_params = {'plot_ax': ax2, 'kernel_choice': 'linear', 'sigma': 1, 'order': 7, 'max_iter': 20, 'lambda': 1.5, 'margin': 1}
+
+    for model, params in {'rbf': rbf_params, 'poly_7': poly_params, 'linear': linear_params}.items():
+        print("Evaluate Kernel SVM with %s..." %model)
+        mysvm = KernelSVM(**params)
+        mysvm.fit(X_train, y_train)
+        beta_vals = mysvm.beta_vals
+        train_cache = mysvm.cache
+        # Plot contour after applying the SVM classifer
+        if plot_contour:
+            errors, test_vals, test_preds = evaluate_plot(beta_vals[-1, :], mysvm.gram, ax3, **train_cache)
+            plt.savefig(os.path.join(cache_path, "%s.png" %model)) # Save fig to the cache path.
+        else:
+            errors, test_vals, test_preds = evaluate_plot(beta_vals[-1, :], mysvm.gram, **train_cache)
+    if check_sklearn:
+        for model, params in {'rbf': rbf_params, 'poly_7': poly_params, 'linear': linear_params}.items():
+            print("Evaluate Scikit-Learn Kernel SVM with %s..." %model)
+            sksvm = SVC(C=params['lambda'], kernel=params['kernel_choice'], 
+                degree=params['order'], gamma=params['sigma'],
+                coef0=0.0, shrinking=True, probability=False, 
+                tol=1e-5, cache_size=200, class_weight=None,
+                verbose=False, max_iter=-1, decision_function_shape='ovr', random_state=None)
+            sksvm.fit(X_train, y_train)
+            error = 1 - sksvm.score(X_test, y_test)
+            print('Misclassification error when lambda =', params['lambda'], ':', error)
+
 if __name__=='__main__':
     cache_path = '../images'
-    sim_demo(cache_path, verbose=True, plot_contour=False)
+    sim_demo(cache_path, verbose=True, plot_contour=True)

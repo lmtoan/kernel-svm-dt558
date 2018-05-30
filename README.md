@@ -31,14 +31,3 @@ The loss function is as below:
 The gradient is as below:
 
 ![Grad](images/grad2.png)
-
-TODO:
-
-- [x] Add `sklearn_compare.py`
-- [ ] Fix `sim_demo.py` to evaluate SVM.
-- [ ] Put all plots in 1 figure. Save plots to `images` directory.
-- [ ] Fix plots legend to include train_cache information.
-- [x] Put training configurations in SVM init.
-- [x] PEP8 `source/*`.
-- [x] PEP8 `examples/*`.
-- [x] README on how to use `src/svm`, run `examples/*`

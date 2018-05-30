@@ -18,6 +18,7 @@ from scipy.stats import mode
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.datasets import load_digits
+import os
 import sys
 sys.path.insert(0, '../') # Insert the root directory to path.
 from src.svm import KernelSVM
@@ -95,11 +96,11 @@ def real_demo(plot_cache_path, verbose=True, plot_progress=True):
             label_pair_list = list(itertools.combinations(label_list, 2))
             for label_pair in tqdm(label_pair_list):
                 X_train_bin, y_train_bin = filter_pair(label_pair, X_train, y_train)
+                if 'plot_ax' in config:
+                    config['label'] = 'Label Pair %s_%s' %(label_pair)
                 mylinearsvm = KernelSVM(**config)
                 mylinearsvm.fit(X_train_bin, y_train_bin)
                 beta_vals, train_cache = mylinearsvm.beta_vals, mylinearsvm.cache
-                if config['plot']:
-                    plt.show(train_cache['plot'])
                 scores = evaluate(beta_vals[-1, :], X_train_bin, X_test, mylinearsvm.gram, **train_cache)
                 y_pred_bin = np.zeros_like(y_test) + label_pair[-1]
                 y_pred_bin[scores >= 0] = label_pair[0]
@@ -114,8 +115,6 @@ def real_demo(plot_cache_path, verbose=True, plot_progress=True):
                 mylinearsvm = KernelSVM(**config)
                 mylinearsvm.fit(X_train, y_train_bin)
                 beta_vals, train_cache = mylinearsvm.beta_vals, mylinearsvm.cache
-                if config['plot']:
-                    plt.show(train_cache['plot'])
                 scores = evaluate(beta_vals[-1, :], X_train, X_test, mylinearsvm.gram, **train_cache)
                 score_list.append(scores)
             test_preds = np.argmax(np.stack(score_list, axis=1), axis=1)
@@ -136,12 +135,28 @@ def real_demo(plot_cache_path, verbose=True, plot_progress=True):
     if verbose:
         print('Number of training examples:', X_train.shape)
         print('Number of test examples:', X_test.shape)
-    # Specify the list of lambdas to experiment.
-    lambda_list = [0.01]
-    for l in lambda_list:
-        error, beta_vals = multiclass_train(X_train, y_train, X_test, y_test, method='ovo', **{'lambda': l, 'kernel_choice': 'linear', 'sigma': 1, 'plot': plot_progress, 'max_iter': 50})
-        print("Lambda = %0.4f. Misclassification Error = %0.4f" %(l, error))
+    if plot_progress:
+        fig = plt.figure(figsize=(20, 10))
+
+    rbf_params = {'kernel_choice': 'rbf', 'sigma': 1, 'order': 3, 'max_iter': 50, 'lambda': 0.8, 'margin': 1}
+    poly_params = {'kernel_choice': 'poly', 'sigma': 1, 'order': 3, 'max_iter': 50, 'lambda': 0.01, 'margin': 1}
+    linear_params = {'kernel_choice': 'linear', 'sigma': 1, 'order': 3, 'max_iter': 50, 'lambda': 1.5, 'margin': 1}
+    model_dict = {'rbf': rbf_params, 'poly_3': poly_params, 'linear': linear_params}
+
+    for i, (model, params) in enumerate(model_dict.items()):
+        print("Start evaluating %s ..." %model)
+        new_ax = None
+        if plot_progress:
+            new_ax = fig.add_subplot(len(model_dict), 1, i + 1)
+        params['plot_ax'] = new_ax
+        error, beta_vals = multiclass_train(X_train, y_train, X_test, y_test, method='ovo', **params)
+        print("For model %s with lambda = %0.4f. Misclassification Error = %0.4f" %(model, params['lambda'], error))
+    if plot_progress:
+        fig.subplots_adjust(hspace=.5)
+        # plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=10)
+        print("Saving plots to %s..." %cache_path)
+        plt.savefig(os.path.join(cache_path, "multiclass_demo.png")) # Save fig to the cache path.
 
 if __name__=='__main__':
     cache_path = '../images'
-    real_demo(cache_path, verbose=True, plot_progress=False)
+    real_demo(cache_path, verbose=True, plot_progress=True)

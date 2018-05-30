@@ -27,7 +27,7 @@ class KernelSVM:
             'eta_init': Initial learning rate. Default at the upper bound on the Lipschitz constant.
             'max_iter': Maximum number of iterations. Default at 50.
             'stopping': Stopping criterio. Default at 1e-5.
-            'plot': Set to True if plots are to be generated.
+            'plot_ax': Assign an empty Matplotlib subplot if plots are to be generated.
 
         Attributes:
             beta_vals: Array of beta/weight for each iteration. Beta_vals[-1, :] will be the final trained beta/weight.
@@ -44,6 +44,8 @@ class KernelSVM:
         self.eps = None
         self.kernel_choice = None
         self.plot = False
+        self.plot_ax = None
+        self.label = None
         
         if 'kernel_choice' in kwargs:
             self.kernel_choice = kwargs['kernel_choice']
@@ -83,8 +85,11 @@ class KernelSVM:
         if 'eta_init' in kwargs:
             self.eta_init = kwargs['eta_init']
             
-        if 'plot' in kwargs:
-            self.plot = kwargs['plot']
+        if 'plot_ax' in kwargs:
+            self.plot_ax = kwargs['plot_ax']
+        
+        if 'label' in kwargs:
+            self.label = kwargs['label']
 
     def fit(self, X_train, y_train):
         """
@@ -111,9 +116,8 @@ class KernelSVM:
         # Train
         self.beta_vals = self.fastgradalgo(beta_init, theta_init, K, y_train, self.lam, self.eta_init, self.max_iter, self.eps)
         # Generate plots if required.
-        if self.plot:
-            ax = self.objective_plot(self.beta_vals, K, y_train, self.lam)
-            self.cache['plot'] = ax
+        if self.plot_ax is not None:
+            self.cache['plot_ax'] = self.objective_plot(self.beta_vals, K, y_train, self.lam)
         # Store model configurations.
         self.cache['kernel_choice'] = self.kernel_choice
         self.cache['sigma'] = self.sigma
@@ -273,9 +277,8 @@ class KernelSVM:
         objs = np.zeros(num_points)
         for i in range(0, num_points):
             objs[i] = self.obj(beta_vals[i, :], K, y, lam)
-        fig, ax = plt.subplots()
-        ax.plot(np.array(range(num_points)), objs, c='red')
-        ax.set_xlabel('Iteration')
-        ax.set_ylabel('Objective value')
-        ax.set_title('Objective value vs. iteration when lambda=' + str(lam))
-        return ax
+        self.plot_ax.plot(np.array(range(num_points)), objs, label=self.label)
+        self.plot_ax.set_xlabel('Iteration')
+        self.plot_ax.set_ylabel('Objective Value')
+        self.plot_ax.set_title('Objective value vs. Iteration when kernel_choice = %s, lambda = %0.3f.' %(self.kernel_choice, self.lam))
+        return self.plot_ax
