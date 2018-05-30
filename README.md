@@ -1,6 +1,6 @@
 # Kernel SVM
 
-### As part of the code release assignment for DT558 Class.
+## Usage
 
 For simulated data demo, try:
 ```
@@ -13,6 +13,15 @@ For DIGITS data demo, try:
 cd examples/
 python real_demo.py
 ```
+## Dependencies 
+Python 3 or 2.7 with the following packages installed:
+1. Numpy
+2. Scipy
+3. Scikit-learn
+4. Pandas
+5. Matplotlib
+
+## Background
 
 The loss function is as below:
 
@@ -21,6 +30,8 @@ The loss function is as below:
 The gradien is as below:
 
 ![Grad](images/grad2.png)
+
+These can be installed using the pip command or the conda command if an Anaconda based environment is being used.
 
 TODO:
 
