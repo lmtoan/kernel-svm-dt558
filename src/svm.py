@@ -1,81 +1,108 @@
+"""
+This module implements cubic regularization of Newton's method, as described in Nesterov and Polyak (2006) and also
+the adaptive cubic regularization algorithm described in Cartis et al. (2011). This code solves the cubic subproblem
+according to slight modifications of Algorithm 7.3.6 of Conn et. al (2000). Cubic regularization solves unconstrained
+minimization problems by minimizing a cubic upper bound to the function at each iteration.
+
+Implementation by Toan Luong
+toanlm@uw.edu
+June 2018
+"""
+
 import sklearn.metrics
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.linalg
 
 class HuberSVM:
-    def __init__(self, h=None):
+    def __init__(self, **kwargs):
         self.beta_vals = None
         self.cache = {}
-        self.h = h
+        self.h = None
+        self.sigma = None
+        self.order = None
+        self.lam = None
+        self.eta_init = None
+        self.max_iter = None
+        self.eps = None
+        self.kernel_choice = None
+        self.plot = False
         
-    def fit(self, X_train, y_train, lam=1, **config):
+        if 'kernel_choice' in kwargs:
+            self.kernel_choice = kwargs['kernel_choice']
+        else:
+            self.kernel_choice = 'linear'
+        
+        if self.kernel_choice == 'rbf':
+            if 'sigma' in kwargs:
+                self.sigma = kwargs['sigma']
+            else:
+                self.sigma = 1.0
+        
+        if self.kernel_choice == 'poly':   
+            if 'order' in kwargs:
+                self.order = kwargs['order']
+            else:
+                self.order = 2
+
+        if 'margin' in kwargs:
+            self.h = kwargs['margin']
+        else:
+            self.h = 0.5
+        
+        if 'lambda' in kwargs:
+            self.lam = kwargs['lambda']
+        else:
+            self.lam = 1.0
+
+        if 'max_iter' in kwargs:
+            self.max_iter = kwargs['max_iter']
+        else:
+            self.max_iter = 50
+            
+        if 'eps' in kwargs:
+            self.eps = kwargs['eps']
+        else:
+            self.eps = 1e-5
+            
+        if 'eta_init' in kwargs:
+            self.eta_init = kwargs['eta_init']
+            
+        if 'plot' in kwargs:
+            self.plot = kwargs['plot']
+
+    def fit(self, X_train, y_train):
         """Fit the model
         """
         # Initialize
         n, d = X_train.shape
         beta_init = np.zeros(n)
         theta_init = np.zeros(n)
-        K = None
-        sigma = None
-        order = None
-        eta_init = None
-        max_iter = None
-        eps = None
-        kernel_choice = None
-        plot = False
-        
-        if 'kernel_choice' in config:
-            kernel_choice = config['kernel_choice']
-        else:
-            kernel_choice = 'linear'
-        
-        if 'sigma' in config:
-            sigma = config['sigma']
-        elif sigma is None and kernel_choice=='rbf':
+
+        if self.kernel_choice == 'rbf' and self.sigma is None:
             # Set sigma based on pairwise distances.
             dists = sklearn.metrics.pairwise.pairwise_distances(X_train).reshape(-1)
-            sigma = np.median(dists)
-            
-        if 'order' in config:
-            order = config['order']
-        elif order is None and kernel_choice=='poly':
-            order = 2
-        
-        if 'max_iter' in config:
-            max_iter = config['max_iter']
-        else:
-            max_iter = 50
-            
-        if 'eps' in config:
-            eps = config['eps']
-        else:
-            eps = 1e-5
-            
-        if 'eta_init' in config:
-            eta_init = config['eta_init']
-            
-        if 'plot' in config:
-            plot = config['plot']
-        
+            self.sigma = np.median(dists)
+
         # Main Loop
-        K = self.gram(X_train, X_train, **{'kernel_choice': kernel_choice, 'sigma': sigma, 
-                                           'order': order})
-        if 'eta_init' not in config:
+        K = self.gram(X_train, X_train, **{'kernel_choice': self.kernel_choice, 'sigma': self.sigma, 
+                                           'order': self.order})
+        if self.eta_init is None:
             # Set eta_init based on an upper bound on the Lipschitz constant.
-            eta_init = 1 / scipy.linalg.eigh(2 / n * np.dot(K, K) + 2 * lam * K, eigvals=(n - 1, n - 1),
+            self.eta_init = 1 / scipy.linalg.eigh(2 / n * np.dot(K, K) + 2 * self.lam * K, eigvals=(n - 1, n - 1),
                                              eigvals_only=True)[0]
-        self.beta_vals = self.fastgradalgo(beta_init, theta_init, K, y_train, lam, eta_init, max_iter, eps)
-        if plot:
-            ax = self.objective_plot(self.beta_vals, K, y_train, lam)
+
+        self.beta_vals = self.fastgradalgo(beta_init, theta_init, K, y_train, self.lam, self.eta_init, self.max_iter, self.eps)
+        if self.plot:
+            ax = self.objective_plot(self.beta_vals, K, y_train, self.lam)
             self.cache['plot'] = ax
-        self.cache['kernel_choice'] = kernel_choice
-        self.cache['sigma'] = sigma
-        self.cache['order'] = order
-        self.cache['eta_init'] = eta_init
-        self.cache['lambda'] = lam
+        self.cache['kernel_choice'] = self.kernel_choice
+        self.cache['sigma'] = self.sigma
+        self.cache['order'] = self.order
+        self.cache['eta_init'] = self.eta_init
+        self.cache['lambda'] = self.lam
     
-    def gram(self, X, Z, **config):
+    def gram(self, X, Z, **kwargs):
         """
         Inputs: 
         - X: matrix with observations as rows
@@ -85,12 +112,12 @@ class HuberSVM:
         """  
         if Z is None:
             Z = X
-        if config['kernel_choice'] == 'rbf':
-            return np.exp(-1/(2*config['sigma']**2)*((np.linalg.norm(X, axis=1)**2)[:, np.newaxis] + (np.linalg.norm(Z, axis=1)**2)[np.newaxis, :] - 2*np.dot(X, Z.T)))
-        elif config['kernel_choice'] == 'linear':
+        if kwargs['kernel_choice'] == 'rbf':
+            return np.exp(-1/(2*kwargs['sigma']**2)*((np.linalg.norm(X, axis=1)**2)[:, np.newaxis] + (np.linalg.norm(Z, axis=1)**2)[np.newaxis, :] - 2*np.dot(X, Z.T)))
+        elif kwargs['kernel_choice'] == 'linear':
             return X.dot(Z.T)
-        elif config['kernel_choice'] == 'poly':
-            return (X.dot(Z.T) + 1)**config['order']
+        elif kwargs['kernel_choice'] == 'poly':
+            return (X.dot(Z.T) + 1)**kwargs['order']
         else:
             print("Kernel Not Implemented")
             return X
@@ -115,7 +142,7 @@ class HuberSVM:
                 beta_vals = np.vstack((beta_vals, beta_new))
         return beta_vals
     
-    def obj(self, beta, K, y, lam, h=0.5):
+    def obj(self, beta, K, y, lam):
         """
         Inputs:
         - beta: Vector to be optimized
@@ -125,8 +152,7 @@ class HuberSVM:
         Output:
         - Value of the objective function at beta
         """
-        if self.h is not None:
-            h = self.h
+        h = self.h
         cost_vector = np.zeros(y.shape[0])
         t = K.dot(beta)
         yt = y * t
@@ -134,7 +160,7 @@ class HuberSVM:
         cost_vector[np.absolute(1 - yt) <= h] = (((1 + h - yt[np.absolute(1 - yt) <= h])**2) / (4 * h))
         return (1/y.shape[0]) * np.sum(cost_vector) + lam * beta.dot(K).dot(beta)
 
-    def grad(self, beta, K, y, lam, h=0.5):
+    def grad(self, beta, K, y, lam):
         """
         Inputs:
         - beta: Vector to be optimized
@@ -144,8 +170,7 @@ class HuberSVM:
         Output:
         - Value of the gradient at beta
         """
-        if self.h is not None:
-            h = self.h
+        h = self.h
         grad_matrix = np.zeros((y.shape[0], y.shape[0]))
         t = K.dot(beta)
         yt = y * t
