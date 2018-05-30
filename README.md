@@ -31,3 +31,22 @@ The loss function is as below:
 The gradient is as below:
 
 ![Grad](images/grad2.png)
+
+## Plots
+
+![r](images/rbf.png)
+
+![l](images/linear.png)
+
+![p](images/poly_7.png)
+
+![real](images/multiclass_demo.png)
+
+## Screenshots
+
+![1](images/sim_demo.png)
+
+![2](images/real_demo.png)
+
+![3](images/sklearn_compare.png)
+
