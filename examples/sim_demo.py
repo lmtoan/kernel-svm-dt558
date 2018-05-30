@@ -74,12 +74,12 @@ def sim_demo(verbose=True, plot_contour=False):
         ax.set_xticks(())
         ax.set_yticks(())
 
-    mysvm = HuberSVM()
-    mysvm.fit(X_train, y_train, lam=0.8, **{'plot': True, 'kernel_choice': 'rbf', 'sigma': 1, 'max_iter': 10})
+    mysvm = HuberSVM(**{'plot': False, 'kernel_choice': 'rbf', 'sigma': 1, 'max_iter': 10, 'lambda': 0.8, 'margin': 1})
+    mysvm.fit(X_train, y_train)
     beta_vals = mysvm.beta_vals
     train_cache = mysvm.cache
     errors, test_vals, contour_ax = evaluate_plot(beta_vals, mysvm.gram, plot_contour, **train_cache)
     plt.show()
     
 if __name__=='__main__':
-    sim_demo(verbose=True, plot_contour=True)
+    sim_demo(verbose=True, plot_contour=False)

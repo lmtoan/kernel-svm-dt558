@@ -29,7 +29,7 @@ def real_demo(verbose=True, plot_progress=True):
             y_vals[i] = np.dot(kernel(X_train, X_test[i, :].reshape(1, -1), **kwargs).reshape(-1), beta)
         return y_vals
 
-    def train_predict(X_train, y_train, X_test, y_test, lam, method='ovo', **config):
+    def train_predict(X_train, y_train, X_test, y_test, method='ovo', **config):
         error = None
         label_list = np.unique(y_train)
         if method == 'ovo':
@@ -37,8 +37,8 @@ def real_demo(verbose=True, plot_progress=True):
             label_pair_list = list(itertools.combinations(label_list, 2))
             for label_pair in tqdm(label_pair_list):
                 X_train_bin, y_train_bin = filter_pair(label_pair, X_train, y_train)
-                mylinearsvm = HuberSVM()
-                mylinearsvm.fit(X_train_bin, y_train_bin, lam, **config)
+                mylinearsvm = HuberSVM(**config)
+                mylinearsvm.fit(X_train_bin, y_train_bin)
                 beta_vals, train_cache = mylinearsvm.beta_vals, mylinearsvm.cache
                 if config['plot']:
                     plt.show(train_cache['plot'])
@@ -53,8 +53,8 @@ def real_demo(verbose=True, plot_progress=True):
             for label in tqdm(label_list):
                 y_train_bin = np.zeros_like(y_train) - 1
                 y_train_bin[y_train == label] = 1
-                mylinearsvm = HuberSVM()
-                mylinearsvm.fit(X_train, y_train_bin, lam, **config)
+                mylinearsvm = HuberSVM(**config)
+                mylinearsvm.fit(X_train, y_train_bin)
                 beta_vals, train_cache = mylinearsvm.beta_vals, mylinearsvm.cache
                 if config['plot']:
                     plt.show(train_cache['plot'])
@@ -80,7 +80,7 @@ def real_demo(verbose=True, plot_progress=True):
         print('Number of test examples:', X_test.shape)
     lambda_list = [1]
     for l in lambda_list:
-        error, beta_vals = train_predict(X_train, y_train, X_test, y_test, lam=l, method='ovr', **{'kernel_choice': 'linear', 'sigma': 1, 'plot': plot_progress, 'max_iter': 50})
+        error, beta_vals = train_predict(X_train, y_train, X_test, y_test, method='ovo', **{'lambda': l, 'kernel_choice': 'linear', 'sigma': 1, 'plot': plot_progress, 'max_iter': 50})
         print("Lambda = %0.4f. Misclassification Error = %0.4f" %(l, error))
 
 if __name__=='__main__':
