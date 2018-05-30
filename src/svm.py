@@ -1,8 +1,7 @@
 """
-This module implements ..., as described in Nesterov and Polyak (2006) and also
-the adaptive cubic regularization algorithm described in Cartis et al. (2011). This code solves the cubic subproblem
-according to slight modifications of Algorithm 7.3.6 of Conn et. al (2000). Cubic regularization solves unconstrained
-minimization problems by minimizing a cubic upper bound to the function at each iteration.
+This module implements the kernel support vector machine (SVM) with the huberized hinge loss.
+
+The formula are described in detail in README.md.
 
 Implementation by Toan Luong
 toanlm@uw.edu

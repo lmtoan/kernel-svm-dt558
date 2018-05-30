@@ -6,9 +6,11 @@
 
 TODO:
 
-- [ ] Add `sklearn_compare.py`
+- [x] Add `sklearn_compare.py`
+- [ ] Fix `sim_demo.py` to evaluate SVM.
 - [ ] Put all plots in 1 figure.
+- [ ] Fix plots legend to include train_cache information.
 - [x] Put training configurations in SVM init.
-- [ ] PEP8 `source/*`.
+- [x] PEP8 `source/*`.
 - [x] PEP8 `examples/*`.
-- [ ] README on how to use `src/svm`, run `examples/*`
+- [x] README on how to use `src/svm`, run `examples/*`
