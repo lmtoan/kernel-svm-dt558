@@ -8,11 +8,18 @@ cd examples/
 python sim_demo.py
 ```
 
-For DIGITS data demo, try:
+For [DIGITS](http://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) data demo, try:
 ```
 cd examples/
 python real_demo.py
 ```
+
+To compare with Scikit-Learn, try:
+```
+cd examples/
+python sklearn_compare.py
+```
+
 ## Dependencies 
 Python 3 or 2.7 with the following packages installed:
 1. Numpy
