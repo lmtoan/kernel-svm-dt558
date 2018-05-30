@@ -1,3 +1,14 @@
+"""
+This module implements ..., as described in Nesterov and Polyak (2006) and also
+the adaptive cubic regularization algorithm described in Cartis et al. (2011). This code solves the cubic subproblem
+according to slight modifications of Algorithm 7.3.6 of Conn et. al (2000). Cubic regularization solves unconstrained
+minimization problems by minimizing a cubic upper bound to the function at each iteration.
+
+Implementation by Toan Luong
+toanlm@uw.edu
+June 2018
+"""
+
 import numpy as np
 from matplotlib.colors import ListedColormap
 import matplotlib.pyplot as plt
@@ -7,7 +18,7 @@ from sklearn.preprocessing import StandardScaler
 
 import sys
 sys.path.insert(0, '../')
-from src.svm import HuberSVM
+from src.svm import KernelSVM
 
 def sim_demo(verbose=True, plot_contour=False):
     def evaluate(beta, X_train, X_test, y_test, kernel, **kwargs):
@@ -74,7 +85,7 @@ def sim_demo(verbose=True, plot_contour=False):
         ax.set_xticks(())
         ax.set_yticks(())
 
-    mysvm = HuberSVM(**{'plot': False, 'kernel_choice': 'rbf', 'sigma': 1, 'max_iter': 10, 'lambda': 0.8, 'margin': 1})
+    mysvm = KernelSVM(**{'plot': False, 'kernel_choice': 'rbf', 'sigma': 1, 'max_iter': 10, 'lambda': 0.8, 'margin': 1})
     mysvm.fit(X_train, y_train)
     beta_vals = mysvm.beta_vals
     train_cache = mysvm.cache

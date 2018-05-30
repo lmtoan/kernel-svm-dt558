@@ -1,3 +1,14 @@
+"""
+This module implements ..., as described in Nesterov and Polyak (2006) and also
+the adaptive cubic regularization algorithm described in Cartis et al. (2011). This code solves the cubic subproblem
+according to slight modifications of Algorithm 7.3.6 of Conn et. al (2000). Cubic regularization solves unconstrained
+minimization problems by minimizing a cubic upper bound to the function at each iteration.
+
+Implementation by Toan Luong
+toanlm@uw.edu
+June 2018
+"""
+
 from tqdm import tqdm
 import itertools
 import numpy as np
@@ -9,7 +20,7 @@ from sklearn.datasets import load_digits
 
 import sys
 sys.path.insert(0, '../')
-from src.svm import HuberSVM
+from src.svm import KernelSVM
     
 def real_demo(verbose=True, plot_progress=True):
     def filter_pair(label_pair, x, y):
@@ -37,7 +48,7 @@ def real_demo(verbose=True, plot_progress=True):
             label_pair_list = list(itertools.combinations(label_list, 2))
             for label_pair in tqdm(label_pair_list):
                 X_train_bin, y_train_bin = filter_pair(label_pair, X_train, y_train)
-                mylinearsvm = HuberSVM(**config)
+                mylinearsvm = KernelSVM(**config)
                 mylinearsvm.fit(X_train_bin, y_train_bin)
                 beta_vals, train_cache = mylinearsvm.beta_vals, mylinearsvm.cache
                 if config['plot']:
@@ -53,7 +64,7 @@ def real_demo(verbose=True, plot_progress=True):
             for label in tqdm(label_list):
                 y_train_bin = np.zeros_like(y_train) - 1
                 y_train_bin[y_train == label] = 1
-                mylinearsvm = HuberSVM(**config)
+                mylinearsvm = KernelSVM(**config)
                 mylinearsvm.fit(X_train, y_train_bin)
                 beta_vals, train_cache = mylinearsvm.beta_vals, mylinearsvm.cache
                 if config['plot']:

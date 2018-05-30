@@ -1,5 +1,5 @@
 """
-This module implements cubic regularization of Newton's method, as described in Nesterov and Polyak (2006) and also
+This module implements ..., as described in Nesterov and Polyak (2006) and also
 the adaptive cubic regularization algorithm described in Cartis et al. (2011). This code solves the cubic subproblem
 according to slight modifications of Algorithm 7.3.6 of Conn et. al (2000). Cubic regularization solves unconstrained
 minimization problems by minimizing a cubic upper bound to the function at each iteration.
@@ -14,8 +14,26 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.linalg
 
-class HuberSVM:
+class KernelSVM:
     def __init__(self, **kwargs):
+        """
+        Intialize the Kernel SVM class with the following optional keyword arguments
+
+        Args (Optional):
+            'kernel_choice': There are 3 choices for kernel which are 'linear', 'poly', 'rbf'. Default at 'linear'.
+            'margin': Margin for the SVM classifier. Default at 0.5.
+            'sigma': Sigma parameter for RBF kernel. Default at np.mean(dists).
+            'order': Polynomial order for the polynomial kernel. Default at 2.
+            'lam': Regularization strength. Default at 1.0.
+            'eta_init': Initial learning rate. Default at the upper bound on the Lipschitz constant.
+            'max_iter': Maximum number of iterations. Default at 50.
+            'stopping': Stopping criterio. Default at 1e-5.
+            'plot': Set to True if plots are to be generated.
+
+        Attributes:
+            beta_vals: Array of beta/weight for each iteration. Beta_vals[-1, :] will be the final trained beta/weight.
+            cache: Contains all training configuration. To be fed into gram function.
+        """
         self.beta_vals = None
         self.cache = {}
         self.h = None
@@ -36,8 +54,6 @@ class HuberSVM:
         if self.kernel_choice == 'rbf':
             if 'sigma' in kwargs:
                 self.sigma = kwargs['sigma']
-            else:
-                self.sigma = 1.0
         
         if self.kernel_choice == 'poly':   
             if 'order' in kwargs:
@@ -72,30 +88,34 @@ class HuberSVM:
             self.plot = kwargs['plot']
 
     def fit(self, X_train, y_train):
-        """Fit the model
         """
-        # Initialize
+        Fit the model given the training dataset.
+
+        Args:
+            X_train: Training examples matrix.
+            y_train: Training labels vector.
+        """
         n, d = X_train.shape
         beta_init = np.zeros(n)
         theta_init = np.zeros(n)
-
+        # Set sigma based on pairwise distances if None.
         if self.kernel_choice == 'rbf' and self.sigma is None:
-            # Set sigma based on pairwise distances.
             dists = sklearn.metrics.pairwise.pairwise_distances(X_train).reshape(-1)
             self.sigma = np.median(dists)
-
-        # Main Loop
+        # Compute K-gram matrix
         K = self.gram(X_train, X_train, **{'kernel_choice': self.kernel_choice, 'sigma': self.sigma, 
                                            'order': self.order})
+        # Set eta_init based on an upper bound on the Lipschitz constant if None.
         if self.eta_init is None:
-            # Set eta_init based on an upper bound on the Lipschitz constant.
-            self.eta_init = 1 / scipy.linalg.eigh(2 / n * np.dot(K, K) + 2 * self.lam * K, eigvals=(n - 1, n - 1),
-                                             eigvals_only=True)[0]
-
+            self.eta_init = 1 / scipy.linalg.eigh(2 / n * np.dot(K, K) + 2 * self.lam * K, 
+                eigvals=(n - 1, n - 1), eigvals_only=True)[0]
+        # Train
         self.beta_vals = self.fastgradalgo(beta_init, theta_init, K, y_train, self.lam, self.eta_init, self.max_iter, self.eps)
+        # Generate plots if required.
         if self.plot:
             ax = self.objective_plot(self.beta_vals, K, y_train, self.lam)
             self.cache['plot'] = ax
+        # Store model configurations.
         self.cache['kernel_choice'] = self.kernel_choice
         self.cache['sigma'] = self.sigma
         self.cache['order'] = self.order
@@ -104,11 +124,15 @@ class HuberSVM:
     
     def gram(self, X, Z, **kwargs):
         """
-        Inputs: 
-        - X: matrix with observations as rows
-        - Z: Another matrix with observations as rows
-        - Sigma: kernel bandwidth
-        Output: Gram matrix
+        Compute the Gram matrix given the kernel type.
+        
+        Args: 
+            X: Matrix with observations as rows.
+            Z: Another matrix with observations as rows.
+            **kwargs: Optional arguments that have to contain 'sigma' for RBF kernel and 'order' for polynomial kernel.
+        
+        Returns: 
+            Gram matrix.
         """  
         if Z is None:
             Z = X
@@ -123,6 +147,22 @@ class HuberSVM:
             return X
         
     def fastgradalgo(self, beta_init, theta_init, K, y, lam, eta_init, max_iter, eps):
+        """
+        Fast-gradient descent.
+
+        Args:
+            beta_init: Initial beta to optimize.
+            theta_init: Initial theta to optimize.
+            K: Input Gram matrix.
+            y: Input labels.
+            lam: Penalty parameter lambda.
+            eta_init: Initial learning rate eta.
+            max_iter: Maximum number of training iterations
+            eps: Stopping criterion. Training will stop if the norm of the gradient is less than eps.
+
+        Returns:
+            beta_vals: Array of beta/weight for each iteration. Beta_vals[-1, :] will be the final trained beta/weight.
+        """
         beta = beta_init
         theta = theta_init
         eta = eta_init
@@ -144,13 +184,16 @@ class HuberSVM:
     
     def obj(self, beta, K, y, lam):
         """
-        Inputs:
-        - beta: Vector to be optimized
-        - K: Gram matrix consisting of evaluations of the kernel k(x_i, x_j) for i,j=1,...,n
-        - y: Labels y_1,...,y_n corresponding to x_1,...,x_n
-        - lam: Penalty parameter lambda
-        Output:
-        - Value of the objective function at beta
+        Compute the objective function based on Huberized Hinge Loss. More on README.md.
+
+        Args:
+            beta: Vector to be optimized.
+            K: Gram matrix consisting of evaluations of the kernel k(x_i, x_j) for i,j=1,...,n.
+            y: Labels y_1,...,y_n corresponding to x_1,...,x_n.
+            lam: Penalty parameter lambda.
+        
+        Returns:
+            Value of the objective function at beta.
         """
         h = self.h
         cost_vector = np.zeros(y.shape[0])
@@ -162,13 +205,16 @@ class HuberSVM:
 
     def grad(self, beta, K, y, lam):
         """
-        Inputs:
-        - beta: Vector to be optimized
-        - K: Gram matrix consisting of evaluations of the kernel k(x_i, x_j) for i,j=1,...,n
-        - y: Labels y_1,...,y_n corresponding to x_1,...,x_n
-        - lam: Penalty parameter lambda
-        Output:
-        - Value of the gradient at beta
+        Compute the gradient based on Huberized Hinge Loss. More on README.md.
+        
+        Args:
+            beta: Vector to be optimized.
+            K: Gram matrix consisting of evaluations of the kernel k(x_i, x_j) for i,j=1,...,n.
+            y: Labels y_1,...,y_n corresponding to x_1,...,x_n.
+            lam: Penalty parameter lambda.
+        
+        Returns:
+            Value of the gradient at beta.
         """
         h = self.h
         grad_matrix = np.zeros((y.shape[0], y.shape[0]))
@@ -179,6 +225,23 @@ class HuberSVM:
         return 1/y.shape[0] * np.sum(grad_matrix, axis=0) + 2 * lam * K.dot(beta)
 
     def bt_line_search(self, beta, K, y, lam, eta=1, alpha=0.5, betaparam=0.8, max_iter=100):
+        """
+        Backtracking Line Search for optimal learning rate eta.
+
+        Args:
+            beta: Beta at that iteration.
+            K: Input Gram matrix.
+            y: Input labels.
+            lam: Penalty parameter lambda.
+            eta: Initial learning rate eta. Default at 1.
+            alpha: Margin. Default at 0.5.
+            betaparam: Fraction to be multiplied with the learning rate. Default at 0.8
+            max_iter: Maximum number of search iterations.
+
+        Returns:
+            eta: Optimal learning rate at that iteration.
+
+        """
         grad_beta = self.grad(beta, K, y, lam)
         norm_grad_beta = np.linalg.norm(grad_beta)
         found_eta = 0
@@ -194,11 +257,23 @@ class HuberSVM:
                 iter += 1
         return eta
     
-    def objective_plot(self, betas, K, y, lam):
-        num_points = np.size(betas, 0)
+    def objective_plot(self, beta_vals, K, y, lam):
+        """
+        Return an objective function plot vs. number of iterations.
+
+        Args:
+            beta_vals: Array of beta/weight for each iteration. Beta_vals[-1, :] will be the final trained beta/weight.
+            K: Input Gram matrix.
+            y: Input labels.
+            lam: Penalty parameter lambda.
+        
+        Returns:
+            ax: Matplotlib plot figure.
+        """
+        num_points = np.size(beta_vals, 0)
         objs = np.zeros(num_points)
         for i in range(0, num_points):
-            objs[i] = self.obj(betas[i, :], K, y, lam)
+            objs[i] = self.obj(beta_vals[i, :], K, y, lam)
         fig, ax = plt.subplots()
         ax.plot(np.array(range(num_points)), objs, c='red')
         ax.set_xlabel('Iteration')
