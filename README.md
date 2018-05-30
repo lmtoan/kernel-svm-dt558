@@ -1,8 +1,26 @@
-# Code Release for DT558 Class
+# Kernel SVM
 
-### Implementation of Kernel SVM
+### As part of the code release assignment for DT558 Class.
 
-...To be added...
+For simulated data demo, try:
+```
+cd examples/
+python sim_demo.py
+```
+
+For DIGITS data demo, try:
+```
+cd examples/
+python real_demo.py
+```
+
+The loss function is as below:
+
+![Loss](images/formula.png)
+
+The gradien is as below:
+
+![Grad](images/grad2.png)
 
 TODO:
 
