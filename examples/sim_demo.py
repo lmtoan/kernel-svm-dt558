@@ -72,7 +72,7 @@ def sim_demo(plot_cache_path, check_sklearn=False, verbose=True, plot_contour=Fa
             ax: Contour Plot if not None.
         """
         error, test_values = evaluate(beta_vals[-1, :], X_train, X_test, y_test, kernel, **train_cache)
-        print('Misclassification error when lambda =', kwargs['lambda'], ':', error)
+        print('Misclassification error when lambda =', train_cache['lambda'], ':', error)
         ax = None
         if plot_contour:
             Zs = np.c_[xx.ravel(), yy.ravel()]
@@ -133,8 +133,4 @@ def sim_demo(plot_cache_path, check_sklearn=False, verbose=True, plot_contour=Fa
     
 if __name__=='__main__':
     cache_path = '../images'
-    if sys.args[1] is not None:
-        cache_path = sys.args[1]
-    if os.path.exists(cache_path):
-        os.makedir(cache_path)
     sim_demo(cache_path, verbose=True, plot_contour=False)

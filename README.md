@@ -20,6 +20,7 @@ Python 3 or 2.7 with the following packages installed:
 3. Scikit-learn
 4. Pandas
 5. Matplotlib
+6. tqdm
 
 ## Background
 
@@ -27,17 +28,15 @@ The loss function is as below:
 
 ![Loss](images/formula.png)
 
-The gradien is as below:
+The gradient is as below:
 
 ![Grad](images/grad2.png)
-
-These can be installed using the pip command or the conda command if an Anaconda based environment is being used.
 
 TODO:
 
 - [x] Add `sklearn_compare.py`
 - [ ] Fix `sim_demo.py` to evaluate SVM.
-- [ ] Put all plots in 1 figure.
+- [ ] Put all plots in 1 figure. Save plots to `images` directory.
 - [ ] Fix plots legend to include train_cache information.
 - [x] Put training configurations in SVM init.
 - [x] PEP8 `source/*`.
